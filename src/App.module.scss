@@ -1,0 +1,5 @@
+.Grid {
+  display: grid;
+  grid-template-columns: repeat(3, 128px);
+  grid-template-rows: repeat(3, 128px);
+}
