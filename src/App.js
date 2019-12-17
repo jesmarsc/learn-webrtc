@@ -57,8 +57,8 @@ function App() {
     event.preventDefault();
     peer = new Peer();
     dataConnection = peer.connect(input);
-    dataConnection.on('data', boxes => {
-      setBoxes(boxes);
+    dataConnection.on('data', index => {
+      doMove(index);
     });
   };
 
@@ -70,8 +70,8 @@ function App() {
     });
     peer.on('connection', connection => {
       dataConnection = connection;
-      dataConnection.on('data', boxes => {
-        setBoxes(boxes);
+      dataConnection.on('data', index => {
+        doMove(index);
       });
     });
   };
@@ -109,20 +109,31 @@ function App() {
         {winner ? 'Winner' : 'Current Player'}: {currentPlayer}
       </p>
       <div className={classes.Grid}>{grid}</div>
-      {peerId ? (
-        <p>Room Number: {peerId}</p>
-      ) : (
-        <button className={classes.button} onClick={createRoom}>
-          Create Room
-        </button>
-      )}
-      <button className={classes.button} type="submit">
-        Join Room
-      </button>
-      <form onSubmit={joinRoom}>
-        <label htmlFor="peerInput">Peer ID: </label>
-        <input id="peerInput" type="text" value={input} onChange={onChange} />
-      </form>
+
+      <div className={classes.controls}>
+        <form className={classes.form} onSubmit={joinRoom}>
+          <label className={classes.form__label}>
+            Peer ID:{' '}
+            <input
+              className={classes.form__input}
+              id="peerInput"
+              type="text"
+              value={input}
+              onChange={onChange}
+            />
+          </label>
+          <button className={classes.button} type="submit">
+            Join
+          </button>
+        </form>
+        {peerId ? (
+          <p>Room Number: {peerId}</p>
+        ) : (
+          <button className={classes.button} onClick={createRoom}>
+            Create
+          </button>
+        )}
+      </div>
     </div>
   );
 }
