@@ -4,7 +4,11 @@ import Square from './components/Square';
 
 import classes from './App.module.scss';
 
-const initGameState = { player: 0, winner: null };
+const initGameState = {
+  board: new Array(9).fill(null),
+  player: 0,
+  winner: false,
+};
 
 const winConditions = [
   [0, 1, 2],
@@ -19,8 +23,16 @@ const winConditions = [
 
 const gameStateReducer = (state, action) => {
   switch (action.type) {
+    case 'MAKE_MOVE': {
+      if (!state.winner && !state.board[action.index]) {
+        const newBoard = [...state.board];
+        newBoard[action.index] = state.player ? 'O' : 'X';
+        return { ...state, board: newBoard };
+      }
+      return state;
+    }
     case 'NEXT_TURN':
-      return { ...state, currentPlayer: state.currentPlayer ^ 1 };
+      return { ...state, player: state.player ^ 1 };
     case 'SET_WINNER':
       return { ...state, winner: true };
     default:
@@ -32,25 +44,16 @@ let peer = null;
 let dataConnection = null;
 
 function App() {
-  const [boxes, setBoxes] = useState(Array(9).fill(null));
   const [input, setInput] = useState('');
   const [peerId, setPeerId] = useState(null);
-  const [{ currentPlayer, winner }, dispatch] = useReducer(
+  const [{ board, player, winner }, dispatch] = useReducer(
     gameStateReducer,
     initGameState
   );
 
-  const doMove = index => {
-    if (!winner && !boxes[index]) {
-      const newBoxes = [...boxes];
-      newBoxes[index] = currentPlayer ? 'O' : 'X';
-      setBoxes(newBoxes);
-      dataConnection.send(newBoxes);
-    }
-  };
-
-  const onChange = event => {
-    setInput(event.target.value);
+  const sendMove = index => {
+    if (dataConnection) dataConnection.send(index);
+    dispatch({ type: 'MAKE_MOVE', index });
   };
 
   const joinRoom = event => {
@@ -58,7 +61,7 @@ function App() {
     peer = new Peer();
     dataConnection = peer.connect(input);
     dataConnection.on('data', index => {
-      doMove(index);
+      dispatch({ type: 'MAKE_MOVE', index });
     });
   };
 
@@ -71,25 +74,19 @@ function App() {
     peer.on('connection', connection => {
       dataConnection = connection;
       dataConnection.on('data', index => {
-        doMove(index);
+        dispatch({ type: 'MAKE_MOVE', index });
       });
     });
   };
-
-  useEffect(() => {
-    return () => {
-      if (peer) peer.destroy();
-    };
-  }, []);
 
   useEffect(() => {
     let winner = false;
     for (const condition of winConditions) {
       const [box1, box2, box3] = condition;
       if (
-        boxes[box1] !== null &&
-        boxes[box1] === boxes[box2] &&
-        boxes[box1] === boxes[box3]
+        board[box1] !== null &&
+        board[box1] === board[box2] &&
+        board[box1] === board[box3]
       ) {
         winner = true;
       }
@@ -97,16 +94,20 @@ function App() {
 
     if (winner) dispatch({ type: 'SET_WINNER' });
     else dispatch({ type: 'NEXT_TURN' });
-  }, [boxes]);
+  }, [board]);
 
-  const grid = boxes.map((value, index) => (
-    <Square key={index} entry={value} onClick={() => doMove(index)} />
+  const onChange = event => {
+    setInput(event.target.value);
+  };
+
+  const grid = board.map((value, index) => (
+    <Square key={index} entry={value} onClick={() => sendMove(index)} />
   ));
 
   return (
     <div className={classes.container}>
       <p>
-        {winner ? 'Winner' : 'Current Player'}: {currentPlayer}
+        {winner ? 'Winner' : 'Current Player'}: {player}
       </p>
       <div className={classes.Grid}>{grid}</div>
 
